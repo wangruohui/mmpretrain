@@ -72,6 +72,11 @@ def parse_args():
         choices=['none', 'pytorch', 'slurm', 'mpi'],
         default='none',
         help='job launcher')
+    parser.add_argument(
+        '--dataset',
+        choices=['test', 'val', 'train'],
+        default='test',
+        help='data set')
     # When using PyTorch version >= 2.0.0, the `torch.distributed.launch`
     # will pass the `--local-rank` parameter to `tools/train.py` instead
     # of `--local_rank`.
@@ -148,6 +153,10 @@ def merge_args(cfg, args):
         if args.no_pin_memory:
             cfg[field]['pin_memory'] = False
 
+    if args.dataset == 'train':
+        # cfg.test_dataloader.dataset.ann_file = cfg.train_dataloader.dataset.ann_file
+        cfg.test_dataloader.dataset = cfg.train_dataloader.dataset
+        print(cfg.test_dataloader.dataset.ann_file)
     set_default_dataloader_cfg(cfg, 'test_dataloader')
 
     if args.cfg_options is not None:

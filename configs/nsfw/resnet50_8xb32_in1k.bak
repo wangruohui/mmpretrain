@@ -1,0 +1,95 @@
+_base_ = [
+    "../_base_/models/resnet50.py",
+    "nsfw_imagenet_bs32_336.py",
+    "../_base_/schedules/imagenet_bs256.py",
+    "../_base_/default_runtime.py",
+]
+
+model = dict(head=dict(loss=dict(use_sigmoid=True)))
+
+train_pipeline = [
+    dict(type="LoadImageFromFile"),
+    dict(type="RandomResizedCrop", scale=224),
+    dict(type="RandomFlip", prob=0.5, direction="horizontal"),
+    dict(type="PackInputs"),
+]
+
+test_pipeline = [
+    dict(type="LoadImageFromFile"),
+    dict(type="ResizeEdge", scale=256, edge="short"),
+    dict(type="CenterCrop", crop_size=224),
+    dict(type="PackInputs"),
+]
+
+train_dataloader = dict(
+    batch_size=32,
+    num_workers=8,
+    persistent_workers=True,
+    dataset=dict(
+        type="CustomDataset",
+        data_root="data/",
+        classes=['drawings', 'hentai', 'neutral', "porn", "sexy"],
+        ann_file="ann_train.txt",
+        with_label=True,
+        pipeline={{_base_.train_pipeline}},
+        _delete_=True,
+    ),
+)
+
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=8,
+    persistent_workers=True,
+    dataset=dict(
+        type="CustomDataset",
+        data_root="data/",
+        classes=['drawings', 'hentai', 'neutral', "porn", "sexy"],
+        ann_file="ann_test.txt",
+        with_label=True,
+        pipeline=test_pipeline,
+        _delete_=True,
+    ),
+)
+
+test_dataloader = dict(
+    batch_size=32,
+    num_workers=8,
+    persistent_workers=False,
+    dataset=dict(
+        type="CustomDataset",
+        data_root="data/",
+        classes=['drawings', 'hentai', 'neutral', "porn", "sexy"],
+        ann_file="ann_test.txt",
+        with_label=True,
+        pipeline=test_pipeline,
+        _delete_=True,
+    ),
+)
+
+val_evaluator = [dict(type="Accuracy", topk=(1, 2)), dict(type="SingleLabelMetric")]
+
+# optimizer
+optim_wrapper = dict(optimizer=dict(lr=0.01))
+
+# learning policy
+param_scheduler = dict(
+    type="MultiStepLR", by_epoch=True, milestones=[1, 3, 5], gamma=0.1
+)
+
+# train, val, test setting
+train_cfg = dict(by_epoch=True, max_epochs=15, val_interval=1)
+
+# runtime settings
+load_from = "checkpoints/resnet50_8xb32_in1k_20210831-ea4938fc.pth"
+
+# configure default hooks
+default_hooks = dict(
+    # print log every 100 iterations.
+    logger=dict(type="LoggerHook", interval=50)
+)
+
+visualizer = dict(
+    type="UniversalVisualizer",
+    vis_backends=[dict(type="LocalVisBackend")],
+    # vis_backends=[dict(type="LocalVisBackend"), dict(type="WandbVisBackend")],
+)

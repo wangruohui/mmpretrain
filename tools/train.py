@@ -60,6 +60,16 @@ def parse_args():
         choices=['none', 'pytorch', 'slurm', 'mpi'],
         default='none',
         help='job launcher')
+    parser.add_argument(
+        '--balance',
+        action='store_true',
+        default=False,
+        help='balance traning dataset')
+    parser.add_argument(
+        '--oversample-thr',
+        type=float,
+        default=1.0,
+        help='threshold for oversample')
     # When using PyTorch version >= 2.0.0, the `torch.distributed.launch`
     # will pass the `--local-rank` parameter to `tools/train.py` instead
     # of `--local_rank`.
@@ -70,7 +80,7 @@ def parse_args():
 
     return args
 
-
+import mmengine.dataset
 def merge_args(cfg, args):
     """Merge CLI arguments to config."""
     if args.no_validate:
@@ -129,6 +139,15 @@ def merge_args(cfg, args):
     set_default_dataloader_cfg(cfg, 'train_dataloader')
     set_default_dataloader_cfg(cfg, 'val_dataloader')
     set_default_dataloader_cfg(cfg, 'test_dataloader')
+
+    if args.balance:
+        orig_dataset = deepcopy(cfg.train_dataloader.dataset)
+        cfg.train_dataloader.dataset = ConfigDict(
+            type="ClassBalancedDataset",
+            dataset=orig_dataset,
+            oversample_thr=args.oversample_thr,
+        )
+        cfg.balance = True
 
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
