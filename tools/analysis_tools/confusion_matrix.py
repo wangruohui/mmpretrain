@@ -92,6 +92,9 @@ def main():
     if args.out is not None:
         mmengine.dump(cm, args.out)
 
+    print(cm)
+    print(classes)
+
     if args.show or args.show_path is not None:
         fig = ConfusionMatrix.plot(
             cm,

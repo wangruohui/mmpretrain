@@ -18,12 +18,6 @@ from mmengine.utils import mkdir_or_exist
 from mmpretrain.apis import get_model
 from mmpretrain.registry import DATASETS
 
-try:
-    from sklearn.manifold import TSNE
-except ImportError as e:
-    raise ImportError('Please install `sklearn` to calculate '
-                      'TSNE by `pip install scikit-learn`') from e
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='t-SNE visualization')
@@ -51,7 +45,7 @@ def parse_args():
     parser.add_argument(
         '--max-num-samples',
         type=int,
-        default=100,
+        default=5000,
         help='The maximum number of samples per category. '
         'Higher number need longer time to calculate. Defaults to 100.')
     parser.add_argument(
@@ -158,9 +152,15 @@ def main():
                          'specify another config file that includes test '
                          'dataloader settings by the `--test-cfg` option.')
     else:
-        dataloader_cfg = cfg.get('test_dataloader')
+        dataloader_cfg = cfg.get('train_dataloader')
 
-    dataset = DATASETS.build(dataloader_cfg.pop('dataset'))
+    dataset = dataloader_cfg.pop('dataset')
+    if dataset.type == 'ClassBalancedDataset':
+        dataset = dataset.dataset
+    else:
+        print(f"type of dataset: {dataset}")
+
+    dataset = DATASETS.build(dataset)
     classes = dataset.metainfo.get('classes')
 
     if args.class_idx is None:
@@ -191,6 +191,8 @@ def main():
     results = dict()
     features = []
     labels = []
+    metas = []
+    logits = []
     for data in progress.track(dataloader, description='Calculating...'):
         with torch.no_grad():
             # preprocess data
@@ -198,12 +200,17 @@ def main():
             batch_inputs, batch_data_samples = \
                 data['inputs'], data['data_samples']
             batch_labels = torch.cat([i.gt_label for i in batch_data_samples])
+            batch_paths = [i.img_path for i in batch_data_samples]
+            metas.extend([{'img_path': str(path)} for path in batch_paths])
 
             # extract backbone features
             extract_args = {}
             if args.vis_stage:
                 extract_args['stage'] = args.vis_stage
             batch_features = model.extract_feat(batch_inputs, **extract_args)
+            logits_ = model.forward(batch_inputs, mode='tensor')
+            # print(logits)
+            logits.append(logits_)
 
             # post process
             if batch_features[0].ndim == 4:
@@ -225,41 +232,55 @@ def main():
         results[key] = np.concatenate(
             [batch[i].cpu().numpy() for batch in features], axis=0)
 
+    # save labels
+    import json
+    json.dump(metas, open(f"{tsne_work_dir}/meta.json", 'w'))
+    labels = np.array(labels)
+    np.save(f'{tsne_work_dir}/labels.npy', labels)
+
     # save features
     for key, val in results.items():
         output_file = f'{tsne_work_dir}{key}.npy'
         np.save(output_file, val)
+        print(f'Save {key} to {output_file}')
 
-    # build t-SNE model
-    tsne_model = TSNE(
-        n_components=args.n_components,
-        perplexity=args.perplexity,
-        early_exaggeration=args.early_exaggeration,
-        learning_rate=args.learning_rate,
-        n_iter=args.n_iter,
-        n_iter_without_progress=args.n_iter_without_progress,
-        init=args.init)
+    logits = torch.cat(logits)
+    np.save(f'{tsne_work_dir}/logits.npy', logits.cpu().numpy())
+    # try:
+    #     from sklearn.manifold import TSNE
+    # except ImportError as e:
+    #     raise ImportError('Please install `sklearn` to calculate '
+    #                       'TSNE by `pip install scikit-learn`') from e
+    # # build t-SNE model
+    # tsne_model = TSNE(
+    #     n_components=args.n_components,
+    #     perplexity=args.perplexity,
+    #     early_exaggeration=args.early_exaggeration,
+    #     learning_rate=args.learning_rate,
+    #     n_iter=args.n_iter,
+    #     n_iter_without_progress=args.n_iter_without_progress,
+    #     init=args.init)
 
-    # run and get results
-    logger.info('Running t-SNE.')
-    for key, val in results.items():
-        result = tsne_model.fit_transform(val)
-        res_min, res_max = result.min(0), result.max(0)
-        res_norm = (result - res_min) / (res_max - res_min)
-        _, ax = plt.subplots(figsize=(10, 10))
-        scatter = ax.scatter(
-            res_norm[:, 0],
-            res_norm[:, 1],
-            alpha=1.0,
-            s=15,
-            c=labels,
-            cmap='tab20')
-        if args.legend:
-            legend = ax.legend(scatter.legend_elements()[0], classes)
-            ax.add_artist(legend)
-        plt.savefig(f'{tsne_work_dir}{key}.png')
-        if args.show:
-            plt.show()
+    # # run and get results
+    # logger.info('Running t-SNE.')
+    # for key, val in results.items():
+    #     result = tsne_model.fit_transform(val)
+    #     res_min, res_max = result.min(0), result.max(0)
+    #     res_norm = (result - res_min) / (res_max - res_min)
+    #     _, ax = plt.subplots(figsize=(10, 10))
+    #     scatter = ax.scatter(
+    #         res_norm[:, 0],
+    #         res_norm[:, 1],
+    #         alpha=1.0,
+    #         s=15,
+    #         c=labels,
+    #         cmap='tab20')
+    #     if args.legend:
+    #         legend = ax.legend(scatter.legend_elements()[0], classes)
+    #         ax.add_artist(legend)
+    #     plt.savefig(f'{tsne_work_dir}{key}.png')
+    #     if args.show:
+    #         plt.show()
     logger.info(f'Save features and results to {tsne_work_dir}')
 
 
