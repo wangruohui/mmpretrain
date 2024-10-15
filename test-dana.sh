@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 # python tools/test.py configs/nsfw/resnet50_lv1_8xb256-rsb-a1-600e.py \
 #     work_dirs/resnet50_lv1_8xb256-rsb-a1-600e/epoch_100.pth \
 #     --cfg-options \
@@ -54,42 +56,51 @@
 # configs/huangfan/resnet50_8xb256-rsb-a3-100e_huangfan.py
 # CONFIG=configs/huangfan/vit-base-p32_64xb64_in1k-384px.py
 # CONFIG=configs/huangfan/resnet50_8xb256-rsb-a3-100e_huangfan.py
+
+CONFIG=$1
 NAME=$(basename $CONFIG .py)
 WORKDIR=work_dirs/$NAME
+# WORKDIR="./work_dirs/1007-convnext-data2-384px"
 
-export PART=38
-SEQ=`seq 10 10 100`
-
-
-# for ep in $SEQ; do
-#     tools/sco_test.sh $CONFIG \
-#         $WORKDIR/epoch_$ep.pth \
-#         --cfg-options test_dataloader.dataset.data_root=$HOME/涉政与色情低俗图包 \
-#         test_dataloader.dataset.ann_file=$HOME/涉政与色情低俗图包/ann_dana.txt \
-#         visualizer.vis_backends= \
-#         --out $WORKDIR/test-dana-$NAME_$ep.pkl &
-#     sleep 1
-# done
-
-# wait
-
-# for ep in $SEQ; do
-#     python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-dana-$NAME_$ep.pkl --show-path $WORKDIR/dana-confmat/confmat_$ep.png --include-values &
-# done
-
+export PART=10
+SEQ=`seq 5 5 100`
 
 for ep in $SEQ; do
     tools/sco_test.sh $CONFIG \
         $WORKDIR/epoch_$ep.pth \
-        --cfg-options visualizer.vis_backends= \
-        --out $WORKDIR/test-val-$NAME_$ep.pkl &
+        --cfg-options test_dataloader.dataset.data_root=$HOME/涉政与色情低俗图包 \
+        test_dataloader.dataset.ann_file=$HOME/涉政与色情低俗图包/ann_dana.txt \
+        visualizer.vis_backends= \
+        --out $WORKDIR/test-dana-$ep.pkl &
     sleep 1
 done
 
 wait
 
+mkdir -p $WORKDIR/dana-confmat
 for ep in $SEQ; do
-    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-val-$NAME_$ep.pkl --show-path $WORKDIR/confmat/confmat_$ep.png --include-values &
+    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-dana-$ep.pkl --show-path $WORKDIR/dana-confmat/confmat_$ep.png --include-values &
+done
+
+for ep in $SEQ; do
+    tools/sco_test.sh $CONFIG \
+        $WORKDIR/epoch_$ep.pth \
+        --dataset val \
+        --cfg-options visualizer.vis_backends= \
+        --out $WORKDIR/test-val-$ep.pkl &
+    sleep 1
+done
+
+wait
+
+mkdir -p $WORKDIR/confmat
+for ep in $SEQ; do
+    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-val-$ep.pkl --show-path $WORKDIR/confmat/confmat_$ep.png --include-values &
+done
+
+for ep in $SEQ; do
+    python tools/analysis_tools/analyze_results.py $CONFIG $WORKDIR/test-val-$ep.pkl --out-dir $WORKDIR/analy-val-$ep --dataset val
+    python tools/analysis_tools/analyze_results.py $CONFIG $WORKDIR/test-dana-$ep.pkl --out-dir $WORKDIR/analy-dana-$ep --dataset test
 done
 
 # tools/sco_test.sh configs/huangfan/convnext-tiny_32xb128_in1k.py \
@@ -97,4 +108,4 @@ done
 #     --cfg-options test_dataloader.dataset.data_root=$HOME/涉政与色情低俗图包 \
 #     test_dataloader.dataset.ann_file=$HOME/涉政与色情低俗图包/ann_sq.txt \
 #     visualizer.vis_backends= \
-#     --out test-0827-convnext-tiny_32xb128_in1k.pkl &
+#     --out test-0827-convnext-tiny

@@ -157,6 +157,9 @@ def merge_args(cfg, args):
         # cfg.test_dataloader.dataset.ann_file = cfg.train_dataloader.dataset.ann_file
         cfg.test_dataloader.dataset = cfg.train_dataloader.dataset
         print(cfg.test_dataloader.dataset.ann_file)
+    elif args.dataset == 'val':
+        cfg.test_dataloader.dataset = cfg.val_dataloader.dataset
+        print(cfg.test_dataloader.dataset.ann_file)
     set_default_dataloader_cfg(cfg, 'test_dataloader')
 
     if args.cfg_options is not None:
