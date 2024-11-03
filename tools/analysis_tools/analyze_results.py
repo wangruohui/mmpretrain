@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import shutil
 import os.path as osp
 from pathlib import Path
 from tqdm import tqdm
@@ -68,7 +69,7 @@ def parse_args():
         '--out-dir', required=True, help='dir to store output files')
     parser.add_argument(
         '--topk',
-        default=300,
+        default=500,
         type=int,
         help='Number of images to select for success/fail')
     parser.add_argument(
@@ -79,7 +80,7 @@ def parse_args():
     parser.add_argument(
         '--resize',
         type=int,
-        default=448,
+        default=384,
         help='resize to store')
     parser.add_argument(
         '--rescale-factor',
@@ -132,9 +133,7 @@ def save_imgs(result_dir, folder_name, results, dataset, resize=None, rescale_fa
 
         prefix = f'{gt_name}-》{pred_name}/'
         name = prefix + data_info['img_path'][5:]
-
         name = Path(name).with_suffix('.jpg')
-        print(name)
 
         if rescale_factor is not None:
             img = mmcv.imrescale(img, rescale_factor)
@@ -142,6 +141,13 @@ def save_imgs(result_dir, folder_name, results, dataset, resize=None, rescale_fa
             img = transform(img=img, scale=int(resize), edge="short")
         vis.visualize_cls(
             img, data_sample, out_file=osp.join(full_dir, name))
+
+        shumei_src = data_info['img_path'] + '.shumei.json'
+        shumei_tgt = prefix + data_info['img_path'][5:] + '.shumei.json'
+        shumei_tgt = osp.join(full_dir, shumei_tgt)
+        if osp.exists(shumei_src):
+            print("Copy from {} to {}".format(shumei_src, shumei_tgt))
+            shutil.copy2(shumei_src, shumei_tgt)
 
         dump = dict()
         for k, v in data_sample.items():
@@ -166,6 +172,10 @@ def main():
     # build the dataloader
     if args.dataset == 'train':
         cfg.test_dataloader.dataset.ann_file = cfg.train_dataloader.dataset.ann_file
+        print(cfg.test_dataloader.dataset.ann_file)
+    elif args.dataset == 'val':
+        cfg.test_dataloader.dataset.data_root = cfg.val_dataloader.dataset.data_root
+        cfg.test_dataloader.dataset.ann_file = cfg.val_dataloader.dataset.ann_file
         print(cfg.test_dataloader.dataset.ann_file)
     cfg.test_dataloader.dataset.pipeline = []
     dataset = build_dataset(cfg.test_dataloader.dataset)

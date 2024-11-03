@@ -8,7 +8,7 @@ data_preprocessor = dict(
     to_rgb=True,
 )
 
-ann_file = "huangfan-shumei-1009-train.txt"
+ann_file = "huangfan-shumei-1021-train.txt"
 imscale = 384
 
 train_pipeline = [
@@ -27,7 +27,6 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile', imdecode_backend='pillow', ignore_empty=True),
     dict(type='ResizeEdge', scale=384, backend='pillow', interpolation='bicubic'),
-    # dict(type='CenterCrop', crop_size=384), # tmp added for batch inference
     dict(type='PackInputs'),
 ]
 
@@ -38,7 +37,7 @@ train_dataloader = dict(
         type='CustomDataset',
         data_root='data/',
         classes=['normal', 'politics', 'porn'],
-        ann_file="huangfan-shumei-1009-train.txt",
+        ann_file="huangfan-shumei-1021-train.txt",
         pipeline=train_pipeline),
     sampler=dict(type='DefaultSampler', shuffle=True),
 )
@@ -50,7 +49,7 @@ val_dataloader = dict(
         type='CustomDataset',
         data_root='data/',
         classes=['normal', 'politics', 'porn'],
-        ann_file="huangfan-shumei-1009-val.txt",
+        ann_file="huangfan-shumei-1021-val.txt",
         pipeline=test_pipeline),
     sampler=dict(type='DefaultSampler', shuffle=False),
 )
