@@ -118,7 +118,9 @@ venv.bak/
 .mypy_cache/
 
 # custom
-/data
+data/*
+!data/*.py
+!data/*.ipynb
 .vscode
 .idea
 *.pkl
@@ -148,3 +150,5 @@ checkpoint
 model_params.txt
 *.ckpt*
 results.txt
+analy-*/
+show_dataset/
