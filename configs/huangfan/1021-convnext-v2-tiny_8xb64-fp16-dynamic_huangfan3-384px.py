@@ -1,6 +1,6 @@
 _base_ = [
     '../_base_/models/convnext_v2/tiny.py',
-    'huangfan3_bs64_swin_384.py',
+    'huangfan4_bs64_swin_384_large_crop.py',
     '../_base_/schedules/imagenet_bs1024_adamw_swin.py',
     '../_base_/default_runtime.py',
 ]
