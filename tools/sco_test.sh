@@ -37,7 +37,7 @@ sco acp jobs create \
     --workspace-name $WORKSPACE_NAME \
     $PART \
     -f pt \
-    -j j$JOBNAME \
+    -j j${JOBNAME:0:60} \
     --container-image-url registry.st-sh-01.sensecore.cn/studio-aicl/ubuntu20.04-py3.8-cuda11.8-cudnn8.9-torch2.0-mmcv2.0:v1.0.0-20230718-102821-65259bc \
     --storage-mount 588236f0-e523-11ee-99c2-5ef5bb6aa06a:/mnt/storage \
     --env HOME:/mnt/storage/user/wangruohui,WANDB_API_KEY:a754553c6f6914d238151c82c798beaacd64d1f5,WANDB_JOB_NAME:$JOBNAME \
