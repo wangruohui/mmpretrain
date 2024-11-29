@@ -98,6 +98,7 @@ def parse_args():
         'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
         'Note that the quotation marks are necessary and that no white space '
         'is allowed.')
+    parser.add_argument("--success", action="store_true")
     args = parser.parse_args()
 
     return args
@@ -212,7 +213,8 @@ def main():
     # topk_idx = sorted(range(len(fail_conf)), key=lambda i: fail_conf[i], reverse=True)[:args.topk]
     # fail = [fail[i] for i in topk_idx]
 
-    save_imgs(args.out_dir, 'success', success, dataset, args.resize, args.rescale_factor)
+    if args.success:
+        save_imgs(args.out_dir, 'success', success, dataset, args.resize, args.rescale_factor)
     save_imgs(args.out_dir, 'fail', fail, dataset, args.resize, args.rescale_factor)
 
 

@@ -131,7 +131,7 @@ def main():
     # create work_dir
     # timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # tsne_work_dir = osp.join(cfg.work_dir, f'tsne_{timestamp}/')
-    search_work_dir = osp.join(cfg.work_dir, f'search/')
+    search_work_dir = osp.join(cfg.work_dir, f'features_{args.vis_stage}/')
     mkdir_or_exist(osp.abspath(search_work_dir))
 
     # init the logger before other steps
@@ -228,13 +228,13 @@ def main():
 
         # save labels
         import json
-        json.dump(metas, open(f"{tsne_work_dir}/meta.json", 'w'))
+        json.dump(metas, open(f"{search_work_dir}/meta.json", 'w'))
         labels = np.array(labels)
-        np.save(f'{tsne_work_dir}/labels.npy', labels)
+        np.save(f'{search_work_dir}/labels.npy', labels)
 
         # save features
         for key, val in results.items():
-            output_file = f'{tsne_work_dir}{key}.npy'
+            output_file = f'{search_work_dir}{key}.npy'
             np.save(output_file, val)
             print(f'Save {key} to {output_file}')
 
@@ -273,7 +273,7 @@ def main():
     #     plt.savefig(f'{tsne_work_dir}{key}.png')
     #     if args.show:
     #         plt.show()
-    logger.info(f'Save features and results to {tsne_work_dir}')
+    logger.info(f'Save features and results to {search_work_dir}')
 
 
 if __name__ == '__main__':
