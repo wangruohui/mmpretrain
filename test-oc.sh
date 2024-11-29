@@ -58,6 +58,13 @@ set -x
 # CONFIG=configs/huangfan/resnet50_8xb256-rsb-a3-100e_huangfan.py
 
 CONFIG=$1
+
+# Assert CONFIG is not empty
+if [ -z "$CONFIG" ]; then
+  echo "Error: CONFIG is empty. Please provide a valid configuration file."
+  exit 1
+fi
+
 NAME=$(basename $CONFIG .py)
 WORKDIR=work_dirs/$NAME
 # WORKDIR="./work_dirs/1007-convnext-data2-384px"
@@ -66,48 +73,28 @@ export PART=10
 SEQ=$(seq 50 10 100)
 
 for ep in $SEQ; do
-    # if not exist, test
-    if [[ -f $WORKDIR/test-dana-$ep.pkl ]]; then
-        continue
-    fi
     tools/sco_test.sh $CONFIG \
         $WORKDIR/epoch_$ep.pth \
-        --cfg-options test_dataloader.dataset.data_root=$HOME/涉政与色情低俗图包 \
-        test_dataloader.dataset.ann_file=$HOME/涉政与色情低俗图包/ann_dana.txt \
+        --cfg-options test_dataloader.dataset.data_root=$HOME/oc_data \
+        test_dataloader.dataset.ann_file=$HOME/oc_data/ann_oc.txt \
         visualizer.vis_backends= \
-        --out $WORKDIR/test-dana-$ep.pkl &
+        --out $WORKDIR/test-oc-$ep.pkl &
     sleep 1
 done
 
 wait
 
-mkdir -p $WORKDIR/dana-confmat
+mkdir -p $WORKDIR/oc-confmat
 for ep in $SEQ; do
-    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-dana-$ep.pkl --show-path $WORKDIR/dana-confmat/confmat_$ep.png --include-values &
+    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-oc-$ep.pkl --show-path $WORKDIR/oc-confmat/confmat_$ep.png --include-values &
 done
 
 for ep in $SEQ; do
-    if [[ -f $WORKDIR/test-val-$ep.pkl ]]; then
-        continue
-    fi
-    tools/sco_test.sh $CONFIG \
-        $WORKDIR/epoch_$ep.pth \
-        --dataset val \
-        --cfg-options visualizer.vis_backends= \
-        --out $WORKDIR/test-val-$ep.pkl &
-    sleep 1
-done
-
-wait
-
-mkdir -p $WORKDIR/confmat
-for ep in $SEQ; do
-    python tools/analysis_tools/confusion_matrix.py $CONFIG $WORKDIR/test-val-$ep.pkl --show-path $WORKDIR/confmat/confmat_$ep.png --include-values &
-done
-
-for ep in $SEQ; do
-    # python tools/analysis_tools/analyze_results.py $CONFIG $WORKDIR/test-val-$ep.pkl --out-dir $WORKDIR/analy-val-$ep --dataset val
-    python tools/analysis_tools/analyze_results.py $CONFIG $WORKDIR/test-dana-$ep.pkl --out-dir $WORKDIR/analy-dana-$ep --dataset test
+    python tools/analysis_tools/analyze_results.py $CONFIG \
+        $WORKDIR/test-oc-$ep.pkl --out-dir $WORKDIR/analy-oc-$ep \
+        --cfg-options test_dataloader.dataset.data_root=$HOME/oc_data \
+        test_dataloader.dataset.ann_file=$HOME/oc_data/ann_oc.txt \
+        --dataset test &
 done
 
 # tools/sco_test.sh configs/huangfan/convnext-tiny_32xb128_in1k.py \
